@@ -1,1973 +1,552 @@
 package com.xzxy.lewy.redis95.common.util;
 
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
-import redis.clients.jedis.BinaryClient.LIST_POSITION;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.SortingParams;
+import org.springframework.util.CollectionUtils;
 
-import javax.annotation.Resource;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
-/**
- * Redis 工具类，封装原生jedis的方法
- */
+@Lazy
 @Component
-@Slf4j
 public class RedisUtil {
 
-    @Resource
-    private JedisPool jedisPool;
+    @Autowired
+    private RedisTemplate redisTemplate;
 
-    /**
-     * 通过key获取储存在redis中的value，并释放连接
-     *
-     * @param key     key
-     * @param indexdb 选择redis库 0-15
-     * @return 成功返回value 失败返回null
-     */
-    public String get(String key, int indexdb) {
-        Jedis jedis = null;
-        String value = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            value = jedis.get(key);
-            log.info(value);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return value;
+    public void setRedisTemplate(RedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
     }
+    //=============================common============================
 
     /**
-     * 通过key获取储存在redis中的value，并释放连接
+     * 指定缓存失效时间
      *
-     * @param key     key 字节数据形式
-     * @param indexdb 选择redis库 0-15
-     * @return 成功返回value 失败返回null
+     * @param key  键
+     * @param time 时间(秒)
      */
-    public byte[] get(byte[] key, int indexdb) {
-        Jedis jedis = null;
-        byte[] value = null;
+    public boolean expire(String key, long time) {
         try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            value = jedis.get(key);
+            if (time > 0) {
+                redisTemplate.expire(key, time, TimeUnit.SECONDS);
+            }
+            return true;
         } catch (Exception e) {
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return value;
-    }
-
-    /**
-     * 向redis存入key和value，并释放连接资源
-     * 如果key已经存在 则覆盖
-     *
-     * @param key     k
-     * @param value   v
-     * @param indexdb 选择redis库 0-15
-     * @return 成功 返回OK 失败返回 0
-     */
-    public String set(String key, String value, int indexdb) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            return jedis.set(key, value);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            return "0";
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return false;
         }
     }
 
     /**
-     * 向redis存入key和value，并释放连接资源
-     * 如果key已经存在 则覆盖
+     * 根据key 获取过期时间
      *
-     * @param key     k 字节数组形式
-     * @param value   v
-     * @param indexdb 选择redis库 0-15
-     * @return 成功 返回OK 失败返回 0
+     * @param key 键 不能为null
+     *            时间(秒) 返回0代表为永久有效
      */
-    public String set(byte[] key, byte[] value, int indexdb) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            return jedis.set(key, value);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            return "0";
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-    }
-
-    /**
-     * 删除指定的key，也可以传入一个包含key的数组
-     *
-     * @param keys 一个key 也可以使 string 数组
-     * @return 返回删除成功的个数
-     */
-    public Long del(String... keys) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            return jedis.del(keys);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            return 0L;
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-    }
-
-    /**
-     * 删除指定的key，也可以传入一个包含key的数组
-     *
-     * @param indexdb 选择redis库 0-15
-     * @param keys    一个key 也可以使 string 数组
-     * @return 返回删除成功的个数
-     */
-    public Long del(int indexdb, String... keys) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            return jedis.del(keys);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            return 0L;
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-    }
-
-    /**
-     * 删除指定的key，也可以传入一个包含key的数组
-     *
-     * @param indexdb 选择redis库 0-15
-     * @param keys    一个key 也可以使 byte 数组
-     * @return 返回删除成功的个数
-     */
-    public Long del(int indexdb, byte[]... keys) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            return jedis.del(keys);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            return 0L;
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-    }
-
-    /**
-     * 通过key向指定的value值追加值
-     *
-     * @param key k
-     * @param str s
-     * @return 成功返回 添加后value的长度 失败 返回 添加的 value 的长度 异常返回0L
-     */
-    public Long append(String key, String str) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.append(key, str);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-            return 0L;
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
+    public long getExpire(String key) {
+        return redisTemplate.getExpire(key, TimeUnit.SECONDS);
     }
 
     /**
      * 判断key是否存在
      *
-     * @param key k
-     * @return true OR false
+     * @param key 键
+     * @return true 存在 false不存在
      */
-    public Boolean exists(String key) {
-        Jedis jedis = null;
+    @SuppressWarnings("unchecked")
+    public boolean hasKey(String key) {
         try {
-            jedis = jedisPool.getResource();
-            return jedis.exists(key);
+            return redisTemplate.hasKey(key);
         } catch (Exception e) {
-
-            log.error(e.getMessage());
+            e.printStackTrace();
             return false;
-        } finally {
-            returnResource(jedisPool, jedis);
         }
     }
 
     /**
-     * 清空当前数据库中的所有 key，此命令从不失败
+     * 删除缓存
      *
-     * @return 总是返回 OK
+     * @param key 可以传一个值 或多个
      */
-    public String flushDB() {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            return jedis.flushDB();
-        } catch (Exception e) {
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return null;
-    }
-
-    /**
-     * 为给定 key 设置生存时间，当 key 过期时(生存时间为0)，它会被自动删除
-     *
-     * @param key   k
-     * @param value 过期时间，单位：秒
-     * @return 成功返回1 如果存在 和 发生异常 返回 0
-     */
-    public Long expire(String key, int value, int indexdb) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            return jedis.expire(key, value);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            return 0L;
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-    }
-
-    /**
-     * 以秒为单位，返回给定 key 的剩余生存时间
-     *
-     * @param key k
-     * @return 当 key 不存在时，返回-2; 当 key 存在但没有设置剩余生存时间时，返回 -1;
-     * 否则，以秒为单位，返回 key的剩余生存时间
-     * 发生异常 返回 0
-     */
-    public Long ttl(String key, int indexdb) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            return jedis.ttl(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-            return 0L;
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-    }
-
-    /**
-     * 移除给定 key 的生存时间，将这个key易失的(带生存时间 key )转换为持久的(一个不带生存时间、永不过期的 key )
-     *
-     * @param key k
-     * @return 当生存时间移除成功时，返回 1；如果key不存在或key没有设置生存时间，返回0，发生异常 返回 -1
-     */
-    public Long persist(String key) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            return jedis.persist(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-            return -1L;
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-    }
-
-    /**
-     * 新增key,并将 key 的生存时间 (以秒为单位)
-     *
-     * @param key     k
-     * @param seconds 生存时间 单位：秒
-     * @param value   v
-     * @return 设置成功时返回 OK；当 seconds 参数不合法时，返回一个错误。
-     */
-    public String setex(String key, int seconds, String value) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            return jedis.setex(key, seconds, value);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return null;
-    }
-
-    /**
-     * 设置key value，如果key已经存在则返回0，nx==> not exist
-     *
-     * @param key   k
-     * @param value v
-     * @return 成功返回1 如果存在 和 发生异常 返回 0
-     */
-    public Long setnx(String key, String value) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            return jedis.setnx(key, value);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-            return 0L;
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-    }
-
-    /**
-     * 将给定 key 的值设为 value ，并返回 key 的旧值(old value)
-     * 当 key 存在但不是字符串类型时，返回一个错误。
-     *
-     * @param key   k
-     * @param value v
-     * @return 返回给定 key 的旧值。当 key 没有旧值时，也即是， key 不存在时，返回 nil
-     */
-    public String getset(String key, String value) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            return jedis.getSet(key, value);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return null;
-    }
-
-    /**
-     * 设置key value并制定这个键值的有效期
-     *
-     * @param key     k
-     * @param value   v
-     * @param seconds 单位:秒
-     * @return 成功返回OK 失败和异常返回null
-     */
-    public String setex(String key, String value, int seconds) {
-        Jedis jedis = null;
-        String res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.setex(key, seconds, value);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key 和offset 从指定的位置开始将原先value替换
-     * 下标从0开始,offset表示从offset下标开始替换
-     * 如果替换的字符串长度过小则会这样:
-     * example:
-     * value : bigsea@zto.cn
-     * str : abc
-     * 从下标7开始替换 则结果为
-     * RES : bigsea.abc.cn
-     *
-     * @param key    k
-     * @param str    s
-     * @param offset 下标位置
-     * @return 返回替换后 value 的长度
-     */
-    public Long setrange(String key, String str, int offset) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            return jedis.setrange(key, offset, str);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-            return 0L;
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-    }
-
-    /**
-     * 通过下标 和key 获取指定下标位置的 value
-     *
-     * @param key         k
-     * @param startOffset 开始位置 从0 开始 负数表示从右边开始截取
-     * @param endOffset   e
-     * @return 如果没有返回null
-     */
-    public String getrange(String key, int startOffset, int endOffset) {
-        Jedis jedis = null;
-        String res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.getrange(key, startOffset, endOffset);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过批量的key获取批量的value
-     *
-     * @param keys string数组 也可以是一个key
-     * @return 成功返回value的集合, 失败返回null的集合 ,异常返回空
-     */
-    public List<String> mget(String... keys) {
-        Jedis jedis = null;
-        List<String> values = null;
-        try {
-            jedis = jedisPool.getResource();
-            values = jedis.mget(keys);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return values;
-    }
-
-    /**
-     * 批量的设置key:value,可以一个
-     * example:
-     * obj.mset(new String[]{"key2","value1","key2","value2"})
-     *
-     * @param keysvalues kvs
-     * @return 成功返回OK 失败 异常 返回 null
-     */
-    public String mset(String... keysvalues) {
-        Jedis jedis = null;
-        String res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.mset(keysvalues);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 批量的设置key:value，可以一个，如果key已经存在则会失败，操作会回滚
-     * example:
-     * obj.msetnx(new String[]{"key2","value1","key2","value2"})
-     *
-     * @param keysvalues kvs
-     * @return 成功返回1 失败返回0
-     */
-    public Long msetnx(String... keysvalues) {
-        Jedis jedis = null;
-        Long res = 0L;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.msetnx(keysvalues);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key 对value进行加值+1操作,当value不是int类型时会返回错误,当key不存在是则value为1
-     *
-     * @param key k
-     * @return 加值后的结果
-     */
-    public Long incr(String key) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.incr(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key给指定的value加值，如果key不存在，则这时value为该值
-     *
-     * @param key     k
-     * @param integer i
-     */
-    public Long incrBy(String key, Long integer) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.incrBy(key, integer);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 对key的值做减减操作，如果key不存在，则设置key为-1
-     *
-     * @param key k
-     */
-    public Long decr(String key) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.decr(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 减去指定的值
-     *
-     * @param key     k
-     * @param integer i
-     */
-    public Long decrBy(String key, Long integer) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.decrBy(key, integer);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key获取value值的长度
-     *
-     * @param key k
-     * @return 失败返回null
-     */
-    public Long serlen(String key) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.strlen(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key给field设置指定的值,如果key不存在,则先创建
-     *
-     * @param key   k
-     * @param field 字段
-     * @param value v
-     * @return 如果存在返回0 异常返回null
-     */
-    public Long hset(String key, String field, String value) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.hset(key, field, value);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key给field设置指定的值,如果key不存在则先创建,如果field已经存在,返回0
-     *
-     * @param key   k
-     * @param field f
-     * @param value v
-     */
-    public Long hsetnx(String key, String field, String value) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.hsetnx(key, field, value);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key同时设置 hash的多个field
-     *
-     * @param key  k
-     * @param hash h
-     * @return 返回OK 异常返回null
-     */
-    public String hmset(String key, Map<String, String> hash, int indexdb) {
-        Jedis jedis = null;
-        String res = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            res = jedis.hmset(key, hash);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key 和 field 获取指定的 value
-     *
-     * @param key   k
-     * @param field f
-     * @return 没有返回null
-     */
-    public String hget(String key, String field) {
-        Jedis jedis = null;
-        String res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.hget(key, field);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key 和 fields 获取指定的value 如果没有对应的value则返回null
-     *
-     * @param key    k
-     * @param fields 可以使 一个String 也可以是 String数组
-     */
-    public List<String> hmget(String key, int indexdb, String... fields) {
-        Jedis jedis = null;
-        List<String> res = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            res = jedis.hmget(key, fields);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key给指定的field的value加上给定的值
-     *
-     * @param key   k
-     * @param field f
-     * @param value v
-     */
-    public Long hincrby(String key, String field, Long value) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.hincrBy(key, field, value);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key和field判断是否有指定的value存在
-     *
-     * @param key   k
-     * @param field f
-     */
-    public Boolean hexists(String key, String field) {
-        Jedis jedis = null;
-        Boolean res = false;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.hexists(key, field);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key返回field的数量
-     *
-     * @param key k
-     */
-    public Long hlen(String key) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.hlen(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-
-    }
-
-    /**
-     * 通过key 删除指定的 field
-     *
-     * @param key    k
-     * @param fields 可以是 一个 field 也可以是 一个数组
-     */
-    public Long hdel(String key, String... fields) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.hdel(key, fields);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key返回所有的field
-     *
-     * @param key k
-     */
-    public Set<String> hkeys(String key) {
-        Jedis jedis = null;
-        Set<String> res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.hkeys(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key返回所有和key有关的value
-     *
-     * @param key k
-     */
-    public List<String> hvals(String key) {
-        Jedis jedis = null;
-        List<String> res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.hvals(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key获取所有的field和value
-     *
-     * @param key k
-     */
-    public Map<String, String> hgetall(String key, int indexdb) {
-        Jedis jedis = null;
-        Map<String, String> res = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            res = jedis.hgetAll(key);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key向list头部添加字符串
-     *
-     * @param key  k
-     * @param strs 可以使一个string 也可以使string数组
-     * @return 返回list的value个数
-     */
-    public Long lpush(int indexdb, String key, String... strs) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            res = jedis.lpush(key, strs);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key向list尾部添加字符串
-     *
-     * @param key  k
-     * @param strs 可以使一个string 也可以使string数组
-     * @return 返回list的value个数
-     */
-    public Long rpush(String key, String... strs) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.rpush(key, strs);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key在list指定的位置之前或者之后 添加字符串元素
-     *
-     * @param key k
-     * @param where LIST_POSITION枚举类型
-     * @param pivot list里面的value
-     * @param value 添加的value
-     */
-    public Long linsert(String key, LIST_POSITION where, String pivot,
-                        String value) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.linsert(key, where, pivot, value);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key设置list指定下标位置的value
-     * 如果下标超过list里面value的个数则报错
-     *
-     * @param key k
-     * @param index 从0开始
-     * @param value v
-     * @return 成功返回OK
-     */
-    public String lset(String key, Long index, String value) {
-        Jedis jedis = null;
-        String res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.lset(key, index, value);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key从对应的list中删除指定的count个 和 value相同的元素
-     *
-     * @param key k
-     * @param count 当count为0时删除全部
-     * @param value v
-     * @return 返回被删除的个数
-     */
-    public Long lrem(String key, long count, String value) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.lrem(key, count, value);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key保留list中从strat下标开始到end下标结束的value值
-     *
-     * @param key k
-     * @param start s
-     * @param end e
-     * @return 成功返回OK
-     */
-    public String ltrim(String key, long start, long end) {
-        Jedis jedis = null;
-        String res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.ltrim(key, start, end);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key从list的头部删除一个value,并返回该value
-     *
-     * @param key k
-     */
-    synchronized public String lpop(String key) {
-        Jedis jedis = null;
-        String res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.lpop(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key从list尾部删除一个value,并返回该元素
-     *
-     * @param key k
-     */
-    synchronized public String rpop(String key, int indexdb) {
-        Jedis jedis = null;
-        String res = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            res = jedis.rpop(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key从一个list的尾部删除一个value并添加到另一个list的头部,并返回该value
-     * 如果第一个list为空或者不存在则返回null
-     *
-     * @param srckey s
-     * @param dstkey d
-     */
-    public String rpoplpush(String srckey, String dstkey, int indexdb) {
-        Jedis jedis = null;
-        String res = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            res = jedis.rpoplpush(srckey, dstkey);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key获取list中指定下标位置的value
-     *
-     * @param key k
-     * @param index i
-     * @return 如果没有返回null
-     */
-    public String lindex(String key, long index) {
-        Jedis jedis = null;
-        String res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.lindex(key, index);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key返回list的长度
-     *
-     * @param key k
-     */
-    public Long llen(String key) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.llen(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 通过key获取list指定下标位置的value
-     * 如果start 为 0 end 为 -1 则返回全部的list中的value
-     *
-     * @param key k
-     * @param start s
-     * @param end e
-     */
-    public List<String> lrange(String key, long start, long end, int indexdb) {
-        Jedis jedis = null;
-        List<String> res = null;
-        try {
-            jedis = jedisPool.getResource();
-            jedis.select(indexdb);
-            res = jedis.lrange(key, start, end);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
-
-    /**
-     * 将列表 key 下标为 index 的元素的值设置为 value
-     *
-     * @param key k
-     * @param index i
-     * @param value v
-     * @return 操作成功返回 ok ，否则返回错误信息
-     */
-    public String lset(String key, long index, String value) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            return jedis.lset(key, index, value);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return null;
-    }
-
-    /**
-     * 返回给定排序后的结果
-     *
-     * @param key k
-     * @param sortingParameters s
-     * @return 返回列表形式的排序结果
-     */
-    public List<String> sort(String key, SortingParams sortingParameters) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            return jedis.sort(key, sortingParameters);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return null;
-    }
-
-    /**
-     * 返回排序后的结果，排序默认以数字作为对象，值被解释为双精度浮点数，然后进行比较。
-     *
-     * @param key k
-     * @return 返回列表形式的排序结果
-     */
-    public List<String> sort(String key) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            return jedis.sort(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return null;
-    }
-
-    /**
-     * 通过key向指定的set中添加value
-     *
-     * @param key k
-     * @param members 可以是一个String 也可以是一个String数组
-     * @return 添加成功的个数
-     */
-    public Long sadd(String key, String... members) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.sadd(key, members);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+    @SuppressWarnings("unchecked")
+    public void del(String... key) {
+        if (key != null && key.length > 0) {
+            if (key.length == 1) {
+                redisTemplate.delete(key[0]);
+            } else {
+                redisTemplate.delete(CollectionUtils.arrayToList(key));
+            }
         }
-        return res;
     }
 
-    /**
-     * 通过key删除set中对应的value值
-     *
-     * @param key k
-     * @param members 可以是一个String 也可以是一个String数组
-     * @return 删除的个数
-     */
-    public Long srem(String key, String... members) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.srem(key, members);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
+    //============================String=============================
 
     /**
-     * 通过key随机删除一个set中的value并返回该值
+     * 普通缓存获取
      *
-     * @param key k
+     * @param key 键
+     * @return 值
      */
-    public String spop(String key) {
-        Jedis jedis = null;
-        String res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.spop(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
+    public Object get(String key, int indexdb) {
+        redisTemplate.indexdb.set(indexdb);
+        return key == null ? null : redisTemplate.opsForValue().get(key);
     }
 
     /**
-     * 通过key获取set中的差集
-     * 以第一个set为标准
+     * 普通缓存放入
      *
-     * @param keys 可以使一个string 则返回set中所有的value 也可以是string数组
+     * @param key   键
+     * @param value 值
+     * @return  true成功 false失败
      */
-    public Set<String> sdiff(String... keys) {
-        Jedis jedis = null;
-        Set<String> res = null;
+    public boolean set(String key, Object value, int indexdb) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.sdiff(keys);
+            redisTemplate.indexdb.set(indexdb);
+            redisTemplate.opsForValue().set(key, value);
+            return true;
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return false;
         }
-        return res;
-    }
-
-    /**
-     * 通过key获取set中的差集并存入到另一个key中
-     * 以第一个set为标准
-     *
-     * @param dstkey 差集存入的key
-     * @param keys   可以使一个string 则返回set中所有的value 也可以是string数组
-     */
-    public Long sdiffstore(String dstkey, String... keys) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.sdiffstore(dstkey, keys);
-        } catch (Exception e) {
 
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
     }
 
     /**
-     * 通过key获取指定set中的交集
+     * 普通缓存放入并设置时间
      *
-     * @param keys 可以使一个string 也可以是一个string数组
+     * @param key   键
+     * @param value 值
+     * @param time  时间(秒) time要大于0 如果time小于等于0 将设置无限期
+     *              true成功 false 失败
      */
-    public Set<String> sinter(String... keys) {
-        Jedis jedis = null;
-        Set<String> res = null;
+    public boolean set(String key, Object value, long time) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.sinter(keys);
+            if (time > 0) {
+                redisTemplate.opsForValue().set(key, value, time, TimeUnit.SECONDS);
+            } else {
+                redisTemplate.opsForValue().set(key, value);
+            }
+            return true;
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return false;
         }
-        return res;
     }
 
     /**
-     * 通过key获取指定set中的交集 并将结果存入新的set中
+     * 递增
      *
-     * @param dstkey dk
-     * @param keys   可以使一个string 也可以是一个string数组
+     * @param key 键
      */
-    public Long sinterstore(String dstkey, String... keys) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.sinterstore(dstkey, keys);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+    public long incr(String key, long delta) {
+        if (delta < 0) {
+            throw new RuntimeException("递增因子必须大于0");
         }
-        return res;
+        return redisTemplate.opsForValue().increment(key, delta);
     }
 
     /**
-     * 通过key返回所有set的并集
+     * 递减
      *
-     * @param keys 可以使一个string 也可以是一个string数组
+     * @param key 键
      */
-    public Set<String> sunion(String... keys) {
-        Jedis jedis = null;
-        Set<String> res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.sunion(keys);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+    public long decr(String key, long delta) {
+        if (delta < 0) {
+            throw new RuntimeException("递减因子必须大于0");
         }
-        return res;
+        return redisTemplate.opsForValue().increment(key, -delta);
     }
-
-    /**
-     * 通过key返回所有set的并集,并存入到新的set中
-     *
-     * @param dstkey dk
-     * @param keys   可以使一个string 也可以是一个string数组
-     */
-    public Long sunionstore(String dstkey, String... keys) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.sunionstore(dstkey, keys);
-        } catch (Exception e) {
 
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
+    //================================Map=================================
 
     /**
-     * 通过key将set中的value移除并添加到第二个set中
+     * HashGet
      *
-     * @param srckey 需要移除的
-     * @param dstkey 添加的
-     * @param member set中的value
+     * @param key  键 不能为null
+     * @param item 项 不能为null
+     *             值
      */
-    public Long smove(String srckey, String dstkey, String member) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.smove(srckey, dstkey, member);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
+    public Object hget(String key, String item) {
+        return redisTemplate.opsForHash().get(key, item);
     }
 
     /**
-     * 通过key获取set中value的个数
+     * 获取hashKey对应的所有键值
      *
-     * @param key k
+     * @param key 键
+     *            对应的多个键值
      */
-    public Long scard(String key) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.scard(key);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
+    public Map<Object, Object> hmget(String key) {
+        return redisTemplate.opsForHash().entries(key);
     }
 
     /**
-     * 通过key判断value是否是set中的元素
+     * HashSet
      *
-     * @param key k
-     * @param member m
+     * @param key 键
+     * @param map 对应多个键值
+     *            true 成功 false 失败
      */
-    public Boolean sismember(String key, String member) {
-        Jedis jedis = null;
-        Boolean res = null;
+    public boolean hmset(String key, Map<String, Object> map) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.sismember(key, member);
+            redisTemplate.opsForHash().putAll(key, map);
+            return true;
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return false;
         }
-        return res;
     }
 
     /**
-     * 通过key获取set中随机的value,不删除元素
+     * HashSet 并设置时间
      *
-     * @param key k
+     * @param key  键
+     * @param map  对应多个键值
+     * @param time 时间(秒)
+     *             true成功 false失败
      */
-    public String srandmember(String key) {
-        Jedis jedis = null;
-        String res = null;
+    public boolean hmset(String key, Map<String, Object> map, long time) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.srandmember(key);
+            redisTemplate.opsForHash().putAll(key, map);
+            if (time > 0) {
+                expire(key, time);
+            }
+            return true;
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return false;
         }
-        return res;
     }
 
     /**
-     * 通过key获取set中所有的value
+     * 向一张hash表中放入数据,如果不存在将创建
      *
-     * @param key k
+     * @param key   键
+     * @param item  项
+     * @param value 值
+     *              true 成功 false失败
      */
-    public Set<String> smembers(String key) {
-        Jedis jedis = null;
-        Set<String> res = null;
+    public boolean hset(String key, String item, Object value) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.smembers(key);
+            redisTemplate.opsForHash().put(key, item, value);
+            return true;
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return false;
         }
-        return res;
     }
 
     /**
-     * 通过key向zset中添加value,score,其中score就是用来排序的
-     * <p>
-     * <p>
-     * 如果该value已经存在则根据score更新元素
+     * 向一张hash表中放入数据,如果不存在将创建
      *
-     * @param key k
-     * @param score s
-     * @param member m
+     * @param key   键
+     * @param item  项
+     * @param value 值
+     * @param time  时间(秒)  注意:如果已存在的hash表有时间,这里将会替换原有的时间
+     *              true 成功 false失败
      */
-    public Long zadd(String key, double score, String member) {
-        Jedis jedis = null;
-        Long res = null;
+    public boolean hset(String key, String item, Object value, long time) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.zadd(key, score, member);
+            redisTemplate.opsForHash().put(key, item, value);
+            if (time > 0) {
+                expire(key, time);
+            }
+            return true;
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return false;
         }
-        return res;
     }
 
     /**
-     * 返回有序集 key 中，指定区间内的成员。min=0,max=-1代表所有元素
+     * 删除hash表中的值
      *
-     * @param key k
-     * @param min min
-     * @param max max
-     * @return 指定区间内的有序集成员的列表。
+     * @param key  键 不能为null
+     * @param item 项 可以使多个 不能为null
      */
-    public Set<String> zrange(String key, long min, long max) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            return jedis.zrange(key, min, max);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return null;
+    public void hdel(String key, Object... item) {
+        redisTemplate.opsForHash().delete(key, item);
     }
 
     /**
-     * 统计有序集 key 中,值在 min 和 max 之间的成员的数量
+     * 判断hash表中是否有该项的值
      *
-     * @param key k
-     * @param min min
-     * @param max max
-     * @return 值在 min 和 max 之间的成员的数量。异常返回0
+     * @param key  键 不能为null
+     * @param item 项 不能为null
+     *             true 存在 false不存在
      */
-    public Long zcount(String key, double min, double max) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            return jedis.zcount(key, min, max);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-            return 0L;
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-
+    public boolean hHasKey(String key, String item) {
+        return redisTemplate.opsForHash().hasKey(key, item);
     }
 
     /**
-     * 为哈希表 key 中的域 field 的值加上增量 increment 。增量也可以为负数，相当于对给定域进行减法操作。 如果 key
-     * 不存在，一个新的哈希表被创建并执行 HINCRBY 命令。如果域 field 不存在，那么在执行命令前，域的值被初始化为 0 。
-     * 对一个储存字符串值的域 field 执行 HINCRBY 命令将造成一个错误。本操作的值被限制在 64 位(bit)有符号数字表示之内。
+     * hash递增 如果不存在,就会创建一个 并把新增后的值返回
      *
-     * 将名称为key的hash中field的value增加integer
-     *
-     * @param key k
-     * @param value v
-     * @param increment incr
-     * @return 执行 HINCRBY 命令之后，哈希表 key 中域 field的值。异常返回0
+     * @param key  键
+     * @param item 项
+     * @param by   要增加几(大于0)
      */
-    public Long hincrBy(String key, String value, long increment) {
-        Jedis jedis = null;
-        try {
-            jedis = jedisPool.getResource();
-            return jedis.hincrBy(key, value, increment);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            return 0L;
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-
+    public double hincr(String key, String item, double by) {
+        return redisTemplate.opsForHash().increment(key, item, by);
     }
 
     /**
-     * 通过key删除在zset中指定的value
+     * hash递减
      *
-     * @param key k
-     * @param members 可以使一个string 也可以是一个string数组
+     * @param key  键
+     * @param item 项
+     * @param by   要减少记(小于0)
      */
-    public Long zrem(String key, String... members) {
-        Jedis jedis = null;
-        Long res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.zrem(key, members);
-        } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
+    public double hdecr(String key, String item, double by) {
+        return redisTemplate.opsForHash().increment(key, item, -by);
     }
-
-    /**
-     * 通过key增加该zset中value的score的值
-     *
-     * @param key k
-     * @param score s
-     * @param member m
-     */
-    public Double zincrby(String key, double score, String member) {
-        Jedis jedis = null;
-        Double res = null;
-        try {
-            jedis = jedisPool.getResource();
-            res = jedis.zincrby(key, score, member);
-        } catch (Exception e) {
 
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
-        }
-        return res;
-    }
+    //============================set=============================
 
     /**
-     * 通过key返回zset中value的排名
-     * 下标从小到大排序
+     * 根据key获取Set中的所有值
      *
-     * @param key k
-     * @param member m
+     * @param key 键
      */
-    public Long zrank(String key, String member) {
-        Jedis jedis = null;
-        Long res = null;
+    public Set<Object> sGet(String key) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.zrank(key, member);
+            return redisTemplate.opsForSet().members(key);
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return null;
         }
-        return res;
     }
 
     /**
-     * 通过key返回zset中value的排名
-     * 下标从大到小排序
+     * 根据value从一个set中查询,是否存在
      *
-     * @param key k
-     * @param member m
+     * @param key   键
+     * @param value 值
+     * @return      true 存在 false不存在
      */
-    public Long zrevrank(String key, String member) {
-        Jedis jedis = null;
-        Long res = null;
+    public boolean sHasKey(String key, Object value) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.zrevrank(key, member);
+            return redisTemplate.opsForSet().isMember(key, value);
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return false;
         }
-        return res;
     }
 
     /**
-     * 通过key将获取score从start到end中zset的value
-     * socre从大到小排序
-     * 当start为0 end为-1时返回全部
+     * 将数据放入set缓存
      *
-     * @param key k
-     * @param start s
-     * @param end e
+     * @param key    键
+     * @param values 值 可以是多个
+     * @return       成功个数
      */
-    public Set<String> zrevrange(String key, long start, long end) {
-        Jedis jedis = null;
-        Set<String> res = null;
+    public long sSet(String key, Object... values) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.zrevrange(key, start, end);
+            return redisTemplate.opsForSet().add(key, values);
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return 0;
         }
-        return res;
     }
 
     /**
-     * 通过key返回指定score内zset中的value
+     * 将set数据放入缓存
      *
-     * @param key k
-     * @param max max
-     * @param min min
-     * @return
+     * @param key    键
+     * @param time   时间(秒)
+     * @param values 值 可以是多个
+     * @return       成功个数
      */
-    public Set<String> zrangebyscore(String key, String max, String min) {
-        Jedis jedis = null;
-        Set<String> res = null;
+    public long sSetAndTime(String key, long time, Object... values) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.zrevrangeByScore(key, max, min);
+            Long count = redisTemplate.opsForSet().add(key, values);
+            if (time > 0) expire(key, time);
+            return count;
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return 0;
         }
-        return res;
     }
 
     /**
-     * 通过key返回指定score内zset中的value
+     * 获取set缓存的长度
      *
-     * @param key k
-     * @param max max
-     * @param min min
+     * @param key 键
      */
-    public Set<String> zrangeByScore(String key, double max, double min) {
-        Jedis jedis = null;
-        Set<String> res = null;
+    public long sGetSetSize(String key) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.zrevrangeByScore(key, max, min);
+            return redisTemplate.opsForSet().size(key);
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return 0;
         }
-        return res;
     }
 
     /**
-     * 返回指定区间内zset中value的数量
+     * 移除值为value的
      *
-     * @param key k
-     * @param min min
-     * @param max max
+     * @param key    键
+     * @param values 值 可以是多个
+     * @return       移除的个数
      */
-    public Long zcount(String key, String min, String max) {
-        Jedis jedis = null;
-        Long res = null;
+    public long setRemove(String key, Object... values) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.zcount(key, min, max);
+            Long count = redisTemplate.opsForSet().remove(key, values);
+            return count;
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return 0;
         }
-        return res;
     }
+    //===============================list=================================
 
     /**
-     * 通过key返回zset中的value个数
+     * 获取list缓存的内容
      *
-     * @param key k
+     * @param key   键
+     * @param start 开始
+     * @param end   结束  0 到 -1代表所有值
      */
-    public Long zcard(String key) {
-        Jedis jedis = null;
-        Long res = null;
+    public List<Object> lGet(String key, long start, long end) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.zcard(key);
+            return redisTemplate.opsForList().range(key, start, end);
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return null;
         }
-        return res;
     }
 
     /**
-     * 通过key获取zset中value的score值
+     * 获取list缓存的长度
      *
-     * @param key k
-     * @param member m
+     * @param key 键
      */
-    public Double zscore(String key, String member) {
-        Jedis jedis = null;
-        Double res = null;
+    public long lGetListSize(String key) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.zscore(key, member);
+            return redisTemplate.opsForList().size(key);
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return 0;
         }
-        return res;
     }
 
     /**
-     * 通过key删除给定区间内的元素
+     * 通过索引 获取list中的值
      *
-     * @param key k
-     * @param start s
-     * @param end e
+     * @param key   键
+     * @param index 索引  index>=0时， 0 表头，1 第二个元素，依次类推；index<0时，-1，表尾，-2倒数第二个元素，依次类推
      */
-    public Long zremrangeByRank(String key, long start, long end) {
-        Jedis jedis = null;
-        Long res = null;
+    public Object lGetIndex(String key, long index) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.zremrangeByRank(key, start, end);
+            return redisTemplate.opsForList().index(key, index);
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return null;
         }
-        return res;
     }
 
     /**
-     * 通过key删除指定score内的元素
+     * 将list放入缓存
      *
-     * @param key k
-     * @param start s
-     * @param end e
+     * @param key   键
+     * @param value 值
      */
-    public Long zremrangeByScore(String key, double start, double end) {
-        Jedis jedis = null;
-        Long res = null;
+    public boolean lSet(String key, Object value) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.zremrangeByScore(key, start, end);
+            redisTemplate.opsForList().rightPush(key, value);
+            return true;
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return false;
         }
-        return res;
     }
 
     /**
-     * 返回满足pattern表达式的所有key
-     * 返回所有的key
+     * 将list放入缓存
      *
-     * @param pattern p
+     * @param key   键
+     * @param value 值
+     * @param time  时间(秒)
      */
-    public Set<String> keys(String pattern) {
-        Jedis jedis = null;
-        Set<String> res = null;
+    public boolean lSet(String key, Object value, long time) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.keys(pattern);
+            redisTemplate.opsForList().rightPush(key, value);
+            if (time > 0) expire(key, time);
+            return true;
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return false;
         }
-        return res;
     }
 
     /**
-     * 查询某个库下满足表达式的所有key
+     * 将list放入缓存
      *
-     * @param pattern p
-     * @param database d
+     * @param key   键
+     * @param value 值
      */
-    public Set<String> keysBySelect(String pattern, int database) {
-        Jedis jedis = null;
-        Set<String> res = null;
+    public boolean lSet(String key, List<Object> value) {
         try {
-            jedis = jedisPool.getResource();
-            jedis.select(database);
-            res = jedis.keys(pattern);
+            redisTemplate.opsForList().rightPushAll(key, value);
+            return true;
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return false;
         }
-        return res;
     }
-
 
     /**
-     * 通过key判断值得类型
+     * 将list放入缓存
      *
-     * @param key k
+     * @param key   键
+     * @param value 值
+     * @param time  时间(秒)
      */
-    public String type(String key) {
-        Jedis jedis = null;
-        String res = null;
+    public boolean lSet(String key, List<Object> value, long time) {
         try {
-            jedis = jedisPool.getResource();
-            res = jedis.type(key);
+            redisTemplate.opsForList().rightPushAll(key, value);
+            if (time > 0) expire(key, time);
+            return true;
         } catch (Exception e) {
-
-            log.error(e.getMessage());
-        } finally {
-            returnResource(jedisPool, jedis);
+            e.printStackTrace();
+            return false;
         }
-        return res;
     }
 
     /**
-     * 序列化对象
+     * 根据索引修改list中的某条数据
      *
-     * @param obj o
-     * @return 对象需实现Serializable接口
+     * @param key   键
+     * @param index 索引
+     * @param value 值
      */
-    public static byte[] ObjTOSerialize(Object obj) {
-        ObjectOutputStream oos = null;
-        ByteArrayOutputStream byteOut = null;
+    public boolean lUpdateIndex(String key, long index, Object value) {
         try {
-            byteOut = new ByteArrayOutputStream();
-            oos = new ObjectOutputStream(byteOut);
-            oos.writeObject(obj);
-            return byteOut.toByteArray();
+            redisTemplate.opsForList().set(key, index, value);
+            return true;
         } catch (Exception e) {
-            /**/
+            e.printStackTrace();
+            return false;
         }
-        return null;
     }
 
     /**
-     * 反序列化对象
+     * 移除N个值为value
      *
-     * @param bytes b
-     * @return 对象需实现Serializable接口
+     * @param key   键
+     * @param count 移除多少个
+     * @param value 值
+     * @return      移除的个数
      */
-    public static Object unserialize(byte[] bytes) {
-        ByteArrayInputStream bais = null;
+    public long lRemove(String key, long count, Object value) {
         try {
-            //反序列化
-            bais = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bais);
-            return ois.readObject();
+            return redisTemplate.opsForList().remove(key, count, value);
         } catch (Exception e) {
-            /**/
-        }
-        return null;
-    }
-
-    /**
-     * 返还到连接池
-     *
-     * @param jedisPool jp
-     * @param jedis j
-     */
-    private static void returnResource(JedisPool jedisPool, Jedis jedis) {
-        if (jedis != null) {
-            jedisPool.returnResource(jedis);
-            jedisPool.close();
+            e.printStackTrace();
+            return 0;
         }
     }
-
 }

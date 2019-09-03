@@ -1,0 +1,15 @@
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\common\config\RedisConfig.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\service\PlayerService.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\common\util\FastJson2JsonRedisSerializer.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\common\util\SerializeUtil.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\Redis95Application.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\common\util\RedisUtil.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\dao\PlayerDao.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\pojo\Player.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\common\controller\BaseController.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\common\util\RedisConstants.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\service\impl\PlayerServiceImpl.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\controller\RedisController.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\common\util\StateParameter.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\common\util\RedisTemplate.java
+D:\workSets\javaSets\redis95\src\main\java\com\xzxy\lewy\redis95\pojo\BaseEntity.java

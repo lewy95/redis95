@@ -8,7 +8,7 @@ import java.util.Date;
 public class BaseEntity {
 
     @Column(name= "create_date") //创建时间
-    private Date createDate = new Date();
+    private Date createDate;
 
     @Column(name= "update_date")//修改时间
     private Date updateDate;

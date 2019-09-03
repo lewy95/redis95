@@ -51,4 +51,14 @@ public class Player extends BaseEntity implements Serializable {
     public void setId(Integer id) {
         this.id = id;
     }
+
+    @Override
+    public String toString() {
+        return "Player{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", age=" + age +
+                ", number=" + number +
+                '}';
+    }
 }
