@@ -79,11 +79,13 @@ public class RedisConfig {
     }
 
     /**
-     * 实例化 RedisTemplate 对象
+     * 实例化自定义 RedisTemplate 对象
+     * JedisConnectionFactory是RedisConnectionFactory的子类
+     * 这里的RedisConnectionFactory，实际上就是注入的JedisConnectionFactory
      */
     @Bean
     public RedisTemplate functionDomainRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
-        log.info("RedisTemplate实例化成功！");
+        log.info("RedisTemplate 初始化成功！");
         RedisTemplate redisTemplate = new RedisTemplate();
         initDomainRedisTemplate(redisTemplate, redisConnectionFactory);
         return redisTemplate;
@@ -116,7 +118,7 @@ public class RedisConfig {
      */
     @Bean(name = "redisUtil")
     public RedisUtil redisUtil(RedisTemplate redisTemplate) {
-        log.info("RedisUtil注入成功！");
+        log.info("RedisUtil 初始化成功！");
         RedisUtil redisUtil = new RedisUtil();
         redisUtil.setRedisTemplate(redisTemplate);
         return redisUtil;

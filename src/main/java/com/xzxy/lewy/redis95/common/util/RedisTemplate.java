@@ -2,7 +2,6 @@ package com.xzxy.lewy.redis95.common.util;
 
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.jedis.JedisConnection;
-import org.springframework.data.redis.core.ValueOperations;
 
 /**
  * 重写RedisTemplate，加入选库的功能
@@ -35,8 +34,4 @@ public class RedisTemplate extends org.springframework.data.redis.core.RedisTemp
         return super.preProcessConnection(connection, existingConnection);
     }
 
-    @Override
-    public ValueOperations opsForValue() {
-        return super.opsForValue();
-    }
 }
