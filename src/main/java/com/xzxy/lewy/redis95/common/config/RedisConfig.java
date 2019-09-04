@@ -62,6 +62,9 @@ public class RedisConfig {
 
     /**
      * Jedis 初始化
+     *
+     * 在springboot2.0以后，redis默认的底层连接池已经由Jedis更换为Lettuce
+     * 本项目底层连接依然使用的jedis，需要进行以下初始化
      */
     @Bean
     public JedisConnectionFactory JedisConnectionFactory(){
@@ -79,15 +82,28 @@ public class RedisConfig {
     }
 
     /**
-     * 实例化自定义 RedisTemplate 对象
-     * JedisConnectionFactory是RedisConnectionFactory的子类
-     * 这里的RedisConnectionFactory，实际上就是注入的JedisConnectionFactory
+     * 实例化自定义的 RedisTemplate 组件
+     *
+     * 注意：这里的RedisConnectionFactory指明了连接池的类型
+     * 它有两个常用子类：LettuceConnectionFactory 和 JedisConnectionFactory
+     * 这里实际上就是注入的就是RedisConnectionFactory的某一个子类，需要自己决定
      */
     @Bean
-    public RedisTemplate functionDomainRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+    public RedisTemplate initRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        log.info("RedisTemplate 开始初始化！");
+        RedisTemplate<String,Object> redisTemplate = new RedisTemplate<>();
+
+        // 配置序列化
+        redisTemplate.setKeySerializer(new StringRedisSerializer());// key序列化
+        redisTemplate.setValueSerializer(fastJson2JsonRedisSerializer());// value序列化
+        redisTemplate.setHashKeySerializer(new StringRedisSerializer());// hash小键的序列化
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());// hash值的序列化
+        // 开启事务
+        redisTemplate.setEnableTransactionSupport(true);
+        // 注入
+        redisTemplate.setConnectionFactory(redisConnectionFactory);
         log.info("RedisTemplate 初始化成功！");
-        RedisTemplate redisTemplate = new RedisTemplate();
-        initDomainRedisTemplate(redisTemplate, redisConnectionFactory);
+
         return redisTemplate;
     }
 
@@ -100,18 +116,28 @@ public class RedisConfig {
     }
 
     /**
-     * 设置数据存入 redis 的序列化方式,并开启事务
+     * 使用Lettuce作为redis的底层连接池，只需要使用LettuceConnectionFactory就行，spring已完成自动配置
+     * 本项目暂时不用
      */
-    private void initDomainRedisTemplate(RedisTemplate redisTemplate, RedisConnectionFactory factory) {
-        //如果不配置Serializer，那么存储的时候缺省使用String，如果用User类型存储，那么会提示错误User can't cast to String！
-        redisTemplate.setKeySerializer(new StringRedisSerializer());
-        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
-        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
-        redisTemplate.setValueSerializer(fastJson2JsonRedisSerializer());
-        // 开启事务
-        redisTemplate.setEnableTransactionSupport(true);
-        redisTemplate.setConnectionFactory(factory);
-    }
+//    @Bean
+//    public RedisTemplate<String, Object> redisTemplate(LettuceConnectionFactory connectionFactory) {
+//        // 配置redisTemplate
+//        RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
+//        redisTemplate.setConnectionFactory(connectionFactory);
+//        // key序列化
+//        redisTemplate.setKeySerializer(new StringRedisSerializer());
+//        // value序列化
+//        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+//        // hash小键的序列化
+//        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
+//        // hash值的序列化
+//        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+//        // 开启事务
+//        redisTemplate.setEnableTransactionSupport(true);
+//        // 注入
+//        redisTemplate.setConnectionFactory(connectionFactory);
+//        return redisTemplate;
+//    }
 
     /**
      * 注入封装RedisTemplate

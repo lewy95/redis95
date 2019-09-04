@@ -1,6 +1,5 @@
 package com.xzxy.lewy.redis95.controller;
 
-import com.sun.xml.internal.bind.v2.runtime.reflect.Lister;
 import com.xzxy.lewy.redis95.common.controller.BaseController;
 import com.xzxy.lewy.redis95.common.util.RedisConstants;
 import com.xzxy.lewy.redis95.common.util.RedisUtil;
@@ -48,6 +47,7 @@ public class RedisController extends BaseController {
             player.setAge(28);
             player.setNumber(9);
             redisUtil.set("player:lewy", player, RedisConstants.datebase1);
+            redisUtil.expire("player:lewy", 300);
             Player res = (Player) redisUtil.get("player:lewy", RedisConstants.datebase1);
             logger.info("res=" + res.toString());
             logger.info("读取redis成功");
