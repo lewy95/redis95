@@ -1,9 +1,7 @@
 package com.xzxy.lewy.redis95.common.util;
 
-import com.fasterxml.jackson.databind.ser.std.StringSerializer;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.jedis.JedisConnection;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
  * 重写RedisTemplate，加入选库的功能

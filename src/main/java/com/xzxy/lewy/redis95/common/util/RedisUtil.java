@@ -15,9 +15,9 @@ import java.util.concurrent.TimeUnit;
 public class RedisUtil {
 
     @Autowired
-    private RedisTemplate<String,Object> redisTemplate;
+    private RedisTemplate<String, Object> redisTemplate;
 
-    public void setRedisTemplate(RedisTemplate redisTemplate) {
+    public void setRedisTemplate(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
     //=============================common============================
@@ -56,7 +56,6 @@ public class RedisUtil {
      * @param key 键
      * @return true 存在 false不存在
      */
-    @SuppressWarnings("unchecked")
     public boolean hasKey(String key) {
         try {
             return redisTemplate.hasKey(key);
@@ -100,7 +99,7 @@ public class RedisUtil {
      *
      * @param key   键
      * @param value 值
-     * @return  true成功 false失败
+     * @return true成功 false失败
      */
     public boolean set(String key, Object value, int indexdb) {
         try {
@@ -325,7 +324,7 @@ public class RedisUtil {
      *
      * @param key   键
      * @param value 值
-     * @return      true 存在 false不存在
+     * @return true 存在 false不存在
      */
     public boolean sHasKey(String key, Object value) {
         try {
@@ -341,7 +340,7 @@ public class RedisUtil {
      *
      * @param key    键
      * @param values 值 可以是多个
-     * @return       成功个数
+     * @return 成功个数
      */
     public long sSet(String key, Object... values) {
         try {
@@ -358,7 +357,7 @@ public class RedisUtil {
      * @param key    键
      * @param time   时间(秒)
      * @param values 值 可以是多个
-     * @return       成功个数
+     * @return 成功个数
      */
     public long sSetAndTime(String key, long time, Object... values) {
         try {
@@ -390,7 +389,7 @@ public class RedisUtil {
      *
      * @param key    键
      * @param values 值 可以是多个
-     * @return       移除的个数
+     * @return 移除的个数
      */
     public long setRemove(String key, Object... values) {
         try {
@@ -539,7 +538,7 @@ public class RedisUtil {
      * @param key   键
      * @param count 移除多少个
      * @param value 值
-     * @return      移除的个数
+     * @return 移除的个数
      */
     public long lRemove(String key, long count, Object value) {
         try {

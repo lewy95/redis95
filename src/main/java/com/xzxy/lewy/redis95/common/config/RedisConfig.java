@@ -143,7 +143,7 @@ public class RedisConfig {
      * 注入封装RedisTemplate
      */
     @Bean(name = "redisUtil")
-    public RedisUtil redisUtil(RedisTemplate redisTemplate) {
+    public RedisUtil redisUtil(RedisTemplate<String, Object> redisTemplate) {
         log.info("RedisUtil 初始化成功！");
         RedisUtil redisUtil = new RedisUtil();
         redisUtil.setRedisTemplate(redisTemplate);
