@@ -23,6 +23,7 @@ public class PlayerServiceImpl implements PlayerService {
         return playerDao.findById(id);
     }
 
+    @Override
     public void delete(Player player) {
         playerDao.delete(player);
     }
