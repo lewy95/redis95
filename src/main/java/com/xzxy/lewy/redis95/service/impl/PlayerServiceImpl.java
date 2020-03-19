@@ -6,10 +6,15 @@ import com.xzxy.lewy.redis95.service.PlayerService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import javax.persistence.criteria.CriteriaBuilder;
 import java.util.List;
 
+/**
+ * @author lewy
+ */
 @Service
 public class PlayerServiceImpl implements PlayerService {
+
     @Resource
     PlayerDao playerDao;
 
@@ -19,7 +24,7 @@ public class PlayerServiceImpl implements PlayerService {
     }
 
     @Override
-    public Player findById(String id) {
+    public Player findById(Integer id) {
         return playerDao.findById(id);
     }
 

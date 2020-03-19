@@ -19,6 +19,9 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
 
+/**
+ * @author lewy
+ */
 @Configuration
 @PropertySource("classpath:redis.properties")
 @Slf4j
@@ -94,10 +97,14 @@ public class RedisConfig {
         RedisTemplate<String,Object> redisTemplate = new RedisTemplate<>();
 
         // 配置序列化
-        redisTemplate.setKeySerializer(new StringRedisSerializer());// key序列化
-        redisTemplate.setValueSerializer(fastJson2JsonRedisSerializer());// value序列化
-        redisTemplate.setHashKeySerializer(new StringRedisSerializer());// hash小键的序列化
-        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());// hash值的序列化
+        // key序列化
+        redisTemplate.setKeySerializer(new StringRedisSerializer());
+        // value序列化
+        redisTemplate.setValueSerializer(fastJson2JsonRedisSerializer());
+        // hash小键的序列化
+        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
+        // hash值的序列化
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
         // 开启事务
         redisTemplate.setEnableTransactionSupport(true);
         // 注入

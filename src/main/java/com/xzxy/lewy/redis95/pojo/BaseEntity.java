@@ -1,9 +1,15 @@
 package com.xzxy.lewy.redis95.pojo;
 
+import lombok.Data;
+
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import java.util.Date;
 
+/**
+ * @author lewy
+ */
+@Data
 @MappedSuperclass
 public class BaseEntity {
 
@@ -12,21 +18,4 @@ public class BaseEntity {
 
     @Column(name= "update_date")//修改时间
     private Date updateDate;
-
-    public Date getCreateDate() {
-        return createDate;
-    }
-
-    public void setCreateDate(Date createDate) {
-        this.createDate = createDate;
-    }
-
-    public Date getUpdateDate() {
-        return updateDate;
-    }
-
-    public void setUpdateDate(Date updateDate) {
-        this.updateDate = updateDate;
-    }
-
 }

@@ -1,10 +1,17 @@
 package com.xzxy.lewy.redis95.pojo;
 
 
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
 import javax.persistence.*;
 import java.io.Serializable;
 
-//@Data
+/**
+ * @author lewy
+ */
+@EqualsAndHashCode(callSuper = true)
+@Data
 @Entity
 @Table(name = "player")
 public class Player extends BaseEntity implements Serializable {
@@ -15,50 +22,10 @@ public class Player extends BaseEntity implements Serializable {
 
     @Column(name = "name")
     private String name;
+
     @Column(name = "age")
     private int age;
+
     @Column(name = "number")
     private int number;
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public int getAge() {
-        return age;
-    }
-
-    public void setAge(int age) {
-        this.age = age;
-    }
-
-    public int getNumber() {
-        return number;
-    }
-
-    public void setNumber(int number) {
-        this.number = number;
-    }
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    @Override
-    public String toString() {
-        return "Player{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", age=" + age +
-                ", number=" + number +
-                '}';
-    }
 }

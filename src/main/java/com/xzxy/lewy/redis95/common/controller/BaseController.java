@@ -7,6 +7,9 @@ import org.springframework.ui.ModelMap;
 
 import java.util.UUID;
 
+/**
+ * @author lewy
+ */
 public abstract class BaseController {
 
     protected final String success = StateParameter.SUCCESS;
@@ -20,11 +23,11 @@ public abstract class BaseController {
         modelMap.put("data", data);
         modelMap.put("msg", msg);
         return modelMap;
-
     }
 
     public String getUuid() {
-        String uuid = UUID.randomUUID().toString(); //获取UUID并转化为String对象
+        //获取UUID并转化为String对象
+        String uuid = UUID.randomUUID().toString();
         uuid = uuid.replace("-", "");
         return uuid;
     }
