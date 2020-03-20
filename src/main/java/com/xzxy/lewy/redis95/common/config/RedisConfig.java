@@ -4,6 +4,7 @@ import com.xzxy.lewy.redis95.common.util.FastJson2JsonRedisSerializer;
 import com.xzxy.lewy.redis95.common.util.RedisTemplate;
 import com.xzxy.lewy.redis95.common.util.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,11 +31,22 @@ public class RedisConfig {
     @Value("${redis.hostName}")
     private String hostName;
 
-    @Value("${redis.password}")
-    private String password;
-
     @Value("${redis.port}")
     private Integer port;
+
+    // 集群模式（非哨兵）
+    //@Value("${spring.redis.cluster.nodes}")
+    //private String clusterHost;
+
+    // 集群模式（哨兵）
+    //@Value("${spring.redis.sentinel.master}")
+    //private String sentinelMaster;
+
+    //@Value("${spring.redis.sentinel.nodes}")
+    //private String sentinelHosts;
+
+    @Value("${redis.password}")
+    private String password;
 
     @Value("${redis.maxIdle}")
     private Integer maxIdle;
@@ -65,18 +77,17 @@ public class RedisConfig {
 
     /**
      * Jedis 初始化
-     *
      * 在springboot2.0以后，redis默认的底层连接池已经由Jedis更换为Lettuce
      * 本项目底层连接依然使用的jedis，需要进行以下初始化
+     * 注意：注入什么参数，说明采用说明形式：
+     * 有三种参数：
+     * 1.RedisStandaloneConfiguration 单机模式
+     * 2.RedisClusterConfiguration    集群（非哨兵）模式
+     * 3.RedisSentinelConfiguration   集群（哨兵）模式
      */
     @Bean
-    public JedisConnectionFactory JedisConnectionFactory(){
-        RedisStandaloneConfiguration redisStandaloneConfiguration = new RedisStandaloneConfiguration ();
-        redisStandaloneConfiguration.setHostName(hostName);
-        redisStandaloneConfiguration.setPort(port);
-        //由于我们使用了动态配置库,所以此处省略
-        //redisStandaloneConfiguration.setDatabase(database);
-        redisStandaloneConfiguration.setPassword(RedisPassword.of(password));
+    public JedisConnectionFactory JedisConnectionFactory(@Autowired RedisStandaloneConfiguration redisStandaloneConfiguration) {
+
         JedisClientConfiguration.JedisClientConfigurationBuilder jedisClientConfiguration = JedisClientConfiguration.builder();
         jedisClientConfiguration.connectTimeout(Duration.ofMillis(timeout));
         JedisConnectionFactory factory = new JedisConnectionFactory(redisStandaloneConfiguration,
@@ -85,8 +96,63 @@ public class RedisConfig {
     }
 
     /**
-     * 实例化自定义的 RedisTemplate 组件
+     * 配置模式一：standalone（单机）模式
      *
+     * @return redisStandaloneConfiguration
+     */
+    @Bean
+    public RedisStandaloneConfiguration redisStandaloneConfiguration() {
+        RedisStandaloneConfiguration redisStandaloneConfiguration = new RedisStandaloneConfiguration();
+        redisStandaloneConfiguration.setHostName(hostName);
+        redisStandaloneConfiguration.setPort(port);
+        //由于我们使用了动态配置库,所以此处省略
+        //redisStandaloneConfiguration.setDatabase(database);
+        redisStandaloneConfiguration.setPassword(RedisPassword.of(password));
+        return redisStandaloneConfiguration;
+    }
+
+    /**
+     * 配置模式二：集群（非哨兵）模式
+     * @return redisClusterConfiguration
+     */
+//    @Bean
+//    public RedisClusterConfiguration redisClusterConfiguration() {
+//        RedisClusterConfiguration redisClusterConfiguration = new RedisClusterConfiguration();
+//        String [] hosts = clusterHost.split(",");
+//        // hosts 为 ip:port, 继续拆分
+//        Set<RedisNode> nodeList = new HashSet<RedisNode>();
+//        for (String hostAndPort : hosts){
+//            String [] hostOrPort = hostAndPort.split(":");
+//            nodeList.add(new RedisNode(hostOrPort[0],Integer.parseInt(hostOrPort[1])));
+//        }
+//        redisClusterConfiguration.setClusterNodes(nodeList);
+//        //集群模式下，集群最大转发的数量
+//        redisClusterConfiguration.setMaxRedirects(18);
+//        redisClusterConfiguration.setPassword(RedisPassword.of(password));
+//        return redisClusterConfiguration;
+//    }
+
+    /**
+     * 配置模式三：集群（哨兵）模式
+     * @return redisSentinelConfiguration
+     */
+//    @Bean
+//    public RedisSentinelConfiguration redisSentinelConfiguration() {
+//        RedisSentinelConfiguration redisSentinelConfiguration = new RedisSentinelConfiguration();
+//        redisSentinelConfiguration.setMaster(sentinelMaster);
+//        String[] sentinels = sentinelHosts.split(",");
+//        for (int i = 0; i < sentinels.length; i++) {
+//            String[] hostAndPort = sentinels[i].split(":");
+//            RedisNode redisServer = new RedisServer(hostAndPort[0], Integer.parseInt(hostAndPort[1]));
+//            redisSentinelConfiguration.sentinel(redisServer);
+//        }
+//        redisSentinelConfiguration.setPassword(RedisPassword.of(password));
+//        return redisSentinelConfiguration;
+//    }
+
+    /**
+     * 实例化自定义的 RedisTemplate 组件
+     * <p>
      * 注意：这里的RedisConnectionFactory指明了连接池的类型
      * 它有两个常用子类：LettuceConnectionFactory 和 JedisConnectionFactory
      * 这里实际上就是注入的就是RedisConnectionFactory的某一个子类，需要自己决定
@@ -94,7 +160,7 @@ public class RedisConfig {
     @Bean
     public RedisTemplate initRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
         log.info("RedisTemplate 开始初始化！");
-        RedisTemplate<String,Object> redisTemplate = new RedisTemplate<>();
+        RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
 
         // 配置序列化
         // key序列化
