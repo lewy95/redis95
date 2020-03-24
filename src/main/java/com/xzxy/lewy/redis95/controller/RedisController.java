@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 
 /**
+ * 测试类：基于对RedisTemplate封装的RedisUtil操作
  * @author lewy
  */
 @Controller

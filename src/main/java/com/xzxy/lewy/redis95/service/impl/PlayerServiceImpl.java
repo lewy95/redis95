@@ -3,6 +3,7 @@ package com.xzxy.lewy.redis95.service.impl;
 import com.xzxy.lewy.redis95.dao.PlayerDao;
 import com.xzxy.lewy.redis95.pojo.Player;
 import com.xzxy.lewy.redis95.service.PlayerService;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -23,8 +24,21 @@ public class PlayerServiceImpl implements PlayerService {
         return playerDao.save(player);
     }
 
+    /**
+     * 非注解形式
+     */
     @Override
     public Player findById(Integer id) {
+        return playerDao.findById(id);
+    }
+
+    /**
+     * 基于注解形式
+     */
+    @Override
+    //@Cacheable(value = "user_details", key = "#id", unless="#result == null")
+    //@Cacheable
+    public Player findByIdAnnotation(Integer id) {
         return playerDao.findById(id);
     }
 

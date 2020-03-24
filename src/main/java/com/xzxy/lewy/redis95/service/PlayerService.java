@@ -13,6 +13,8 @@ public interface PlayerService {
 
     Player findById(Integer id);
 
+    Player findByIdAnnotation(Integer id);
+
     void delete(Player player);
 
     List<Player> findAll();
