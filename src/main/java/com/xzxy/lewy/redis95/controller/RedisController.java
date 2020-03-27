@@ -57,7 +57,9 @@ public class RedisController extends BaseController {
             player.setAge(28);
             player.setNumber(9);
             redisUtil.set("player:lewy", player, RedisConstants.DATEBASE1);
-            redisUtil.expire("player:lewy", 300);
+            redisUtil.expire("player:lewy", 300, RedisConstants.DATEBASE1);
+            // 获取过期时间
+            System.out.println(redisUtil.getExpire("player:lewy"));
             // 读取一个对象
             Player res = (Player) redisUtil.get("player:lewy", RedisConstants.DATEBASE1);
             logger.info("res=" + res.toString());
@@ -78,10 +80,10 @@ public class RedisController extends BaseController {
         try {
             Player player = playerService.findById(id);
             String key = "player-" + id;
-            redisUtil.set(key, player, RedisConstants.DATEBASE1);
-            redisUtil.expire(key, 300);
+            redisUtil.set(key, player, RedisConstants.DATEBASE2);
+            redisUtil.expire(key, 300, RedisConstants.DATEBASE2);
             // 读取一个对象
-            Player res = (Player) redisUtil.get(key, RedisConstants.DATEBASE1);
+            Player res = (Player) redisUtil.get(key, RedisConstants.DATEBASE2);
             logger.info("res=" + res.toString());
             logger.info("读取redis成功");
             return getModelMap(StateParameter.SUCCESS, res, "操作成功");

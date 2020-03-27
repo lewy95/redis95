@@ -11,6 +11,8 @@ public interface PlayerService {
 
     Player save(Player player);
 
+    Player update(Player player);
+
     Player findById(Integer id);
 
     Player findByIdAnnotation(Integer id);

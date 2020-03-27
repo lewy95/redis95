@@ -9,16 +9,23 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisPassword;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.jedis.JedisClientConfiguration;
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author lewy
@@ -213,7 +220,8 @@ public class RedisConfig {
 //    }
 
     /**
-     * 注入封装RedisTemplate
+     * 配置redisUtil工具类
+     * 注入封装的RedisTemplate
      */
     @Bean(name = "redisUtil")
     public RedisUtil redisUtil(RedisTemplate<String, Object> redisTemplate) {
@@ -221,6 +229,38 @@ public class RedisConfig {
         RedisUtil redisUtil = new RedisUtil();
         redisUtil.setRedisTemplate(redisTemplate);
         return redisUtil;
+    }
+
+    /**
+     * 配置基于SpringCache注解的自定义效果生效(主要是序列化等)
+     * 注入封装的redisTemplate
+     */
+    @Bean
+    public RedisCacheManager redisCacheManager(RedisTemplate<String, Object> redisTemplate) {
+
+        RedisCacheWriter redisCacheWriter =
+                RedisCacheWriter.nonLockingRedisCacheWriter(Objects.requireNonNull(redisTemplate.getConnectionFactory()));
+        RedisCacheConfiguration redisCacheConfiguration = RedisCacheConfiguration
+                .defaultCacheConfig()
+                // 配置序列化
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(redisTemplate.getValueSerializer()));
+        return new RedisCacheManager(redisCacheWriter,
+                redisCacheConfiguration,
+                this.getRedisCacheTtlMap(redisCacheConfiguration));
+    }
+
+    /**
+     * 配置一个使注解生效的map
+     */
+    private Map<String, RedisCacheConfiguration> getRedisCacheTtlMap(RedisCacheConfiguration redisCacheConfiguration) {
+        Map<String, RedisCacheConfiguration> redisCacheConfigurationMap = new HashMap<>();
+        // 根据具体来自定义设置缓存时间
+        redisCacheConfigurationMap.put("businessCache", redisCacheConfiguration.entryTtl(Duration.ofSeconds(30*60)));
+        redisCacheConfigurationMap.put("userCache", redisCacheConfiguration.entryTtl(Duration.ofSeconds(60)));
+        // 这里做一个测试: player_info对应@Cacheable的value属性
+        redisCacheConfigurationMap.put("player_info", redisCacheConfiguration.entryTtl(Duration.ofSeconds(60)));
+
+        return redisCacheConfigurationMap;
     }
 
 }

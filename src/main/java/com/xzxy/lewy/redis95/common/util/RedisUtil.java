@@ -1,5 +1,6 @@
 package com.xzxy.lewy.redis95.common.util;
 
+import com.xzxy.lewy.redis95.pojo.Player;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -28,9 +29,10 @@ public class RedisUtil {
      * @param key  键
      * @param time 时间(秒)
      */
-    public boolean expire(String key, long time) {
+    public boolean expire(String key, long time, int targetDb) {
         try {
             if (time > 0) {
+                RedisTemplate.indexdb.set(targetDb);
                 redisTemplate.expire(key, time, TimeUnit.SECONDS);
             }
             return true;
@@ -207,11 +209,11 @@ public class RedisUtil {
      * @param time 时间(秒)
      *             true成功 false失败
      */
-    public boolean hmset(String key, Map<String, Object> map, long time) {
+    public boolean hmset(String key, Map<String, Object> map, long time, int targetDb) {
         try {
             redisTemplate.opsForHash().putAll(key, map);
             if (time > 0) {
-                expire(key, time);
+                expire(key, time, targetDb);
             }
             return true;
         } catch (Exception e) {
@@ -247,11 +249,11 @@ public class RedisUtil {
      * @param time  时间(秒)  注意:如果已存在的hash表有时间,这里将会替换原有的时间
      *              true 成功 false失败
      */
-    public boolean hset(String key, String item, Object value, long time) {
+    public boolean hset(String key, String item, Object value, long time, int targetDb) {
         try {
             redisTemplate.opsForHash().put(key, item, value);
             if (time > 0) {
-                expire(key, time);
+                expire(key, time, targetDb);
             }
             return true;
         } catch (Exception e) {
@@ -359,10 +361,12 @@ public class RedisUtil {
      * @param values 值 可以是多个
      * @return 成功个数
      */
-    public long sSetAndTime(String key, long time, Object... values) {
+    public long sSetAndTime(String key, long time, int targetDb, Object... values) {
         try {
             Long count = redisTemplate.opsForSet().add(key, values);
-            if (time > 0) expire(key, time);
+            if (time > 0) {
+                expire(key, time, targetDb);
+            }
             return count;
         } catch (Exception e) {
             e.printStackTrace();
@@ -470,11 +474,11 @@ public class RedisUtil {
      * @param value 值
      * @param time  时间(秒)
      */
-    public boolean lSet(String key, Object value, long time) {
+    public boolean lSet(String key, Object value, long time, int targetDb) {
         try {
             redisTemplate.opsForList().rightPush(key, value);
             if (time > 0) {
-                expire(key, time);
+                expire(key, time, targetDb);
             }
             return true;
         } catch (Exception e) {
@@ -506,11 +510,11 @@ public class RedisUtil {
      * @param value 值
      * @param time  时间(秒)
      */
-    public boolean lSet(String key, List<Object> value, long time) {
+    public boolean lSet(String key, List<Object> value, long time, int targetDb) {
         try {
             redisTemplate.opsForList().rightPushAll(key, value);
             if (time > 0) {
-                expire(key, time);
+                expire(key, time, targetDb);
             }
             return true;
         } catch (Exception e) {
